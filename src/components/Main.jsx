@@ -1,35 +1,36 @@
 import React from "react"
 import IngredientsList from "./IngredientsList"
 import ClaudeRecipe from "./ClaudeRecipe"
-import { getRecipeFromChefClaude } from "../ai"
-export default function Main() {
-   
+import { getRecipeFromChefClaude, getRecipeFromMistral } from "../ai"
 
-    const [ingredients, setIngredients] = React.useState([])
-    const [recipeShown, setRecipeShown] = React.useState(false)
+export default function Main() {
+    const [ingredients, setIngredients] = React.useState(
+        ["chicken", "all the main spices", "corn", "heavy cream", "pasta"]
+    )
     const [recipe, setRecipe] = React.useState("")
+    const recipeSection = React.useRef(null)
+    
+    React.useEffect(() => {
+        if (recipe !== "" && recipeSection.current !== null) {
+            // recipeSection.current.scrollIntoView({behavior: "smooth"})
+            const yCoord = recipeSection.current.getBoundingClientRect().top + window.scrollY
+            window.scroll({
+                top: yCoord,
+                behavior: "smooth"
+            })
+        }
+    }, [recipe])
+
+    async function getRecipe() {
+        const recipeMarkdown = await getRecipeFromChefClaude(ingredients)
+        setRecipe(recipeMarkdown)
+    }
 
     function addIngredient(formData) {
         const newIngredient = formData.get("ingredient")
-
-        if (newIngredient.trim() !== "") {
-            setIngredients(prevIngredients => [
-                ...prevIngredients,
-                newIngredient
-            ])
-        }
+        setIngredients(prevIngredients => [...prevIngredients, newIngredient])
     }
-
-  const [loading, setLoading] = React.useState(false)
-
-async function toggleRecipeShown() {
-  setLoading(true)
-  const recipeResult = await getRecipeFromChefClaude(ingredients)
-  setRecipe(recipeResult)
-  setRecipeShown(true)
-  setLoading(false)
-}
-
+    
     return (
         <main>
             <form action={addIngredient} className="add-ingredient-form">
@@ -42,14 +43,15 @@ async function toggleRecipeShown() {
                 <button>Add ingredient</button>
             </form>
 
-            {ingredients.length > 0 && (
+            {ingredients.length > 0 &&
                 <IngredientsList
+                    ref={recipeSection}
                     ingredients={ingredients}
-                    toggleRecipeShown={toggleRecipeShown}
+                    getRecipe={getRecipe}
                 />
-            )}
+            }
 
-            {recipeShown && <ClaudeRecipe recipe={recipe} />}
+            {recipe && <ClaudeRecipe recipe={recipe} />}
         </main>
     )
 }
